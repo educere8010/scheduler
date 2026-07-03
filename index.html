@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시간표 배경화면 메이커</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#E5E4E0; --panel:#FBFAF8; --card:#FFFFFF; --ink:#2D3540; --muted:#7C8088;
+    --line:#DEDCD4; --line2:#ECEAE3; --slate:#6E7F94; --slate-d:#54627A; --mustard:#CDA13C;
+    --mustard-d:#B68E2E; --radius:14px;
+    --font:'Pretendard','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .brand .dot{width:13px;height:13px;border-radius:4px;background:var(--mustard)}
+  .brand small{font-weight:500;color:var(--muted);font-size:12.5px;margin-left:2px}
+  main{display:flex;height:calc(100% - 59px);min-height:0}
+  .rail{width:372px;flex:none;overflow-y:auto;padding:18px;background:var(--panel);border-right:1px solid var(--line)}
+  .stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:28px;
+    background:
+      radial-gradient(120% 120% at 50% 0%, #ECEBE6 0%, var(--bg) 60%);}
+  .frame{max-width:100%;max-height:100%;border-radius:12px;overflow:hidden;
+    box-shadow:0 18px 50px -18px rgba(45,53,64,.35), 0 2px 8px rgba(45,53,64,.10);border:1px solid var(--line)}
+  #preview{display:block;max-width:100%;max-height:calc(100vh - 130px);height:auto;width:auto}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px 15px 16px;margin-bottom:14px}
+  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin:0 0 12px}
+  .row{display:flex;gap:8px;align-items:center}
+  .row + .row{margin-top:8px}
+  label.field{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500}
+  input[type=text], input[type=number], select{
+    width:100%;font-family:var(--font);font-size:13.5px;color:var(--ink);background:#fff;
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;outline:none}
+  input:focus, select:focus{border-color:var(--mustard);box-shadow:0 0 0 3px rgba(205,161,60,.16)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .grid7 input{padding:6px 4px;text-align:center;font-size:12px}
+
+  .btn{font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border-radius:9px;
+    padding:8px 12px;border:1px solid var(--slate);background:#fff;color:var(--slate);transition:.12s}
+  .btn:hover{background:#F1F3F5}
+  .btn-accent{background:var(--mustard);border-color:var(--mustard);color:#3A2B06}
+  .btn-accent:hover{background:var(--mustard-d)}
+  .btn-ghost{border-color:var(--line);color:var(--muted)}
+  .btn-sm{padding:6px 9px;font-size:12px}
+  .btn-block{width:100%;justify-content:center;display:flex}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* block editor */
+  .blk{display:flex;flex-direction:column;gap:7px;
+    padding:9px;border:1px solid var(--line2);border-radius:10px;margin-bottom:7px;background:#FCFBF9}
+  .blk .line1{display:flex;align-items:center;gap:7px}
+  .blk .line2{display:grid;grid-template-columns:1fr 72px 72px;gap:6px}
+  .blk .lab{flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+  .blk .lab input{flex:1;min-width:0;border:1px solid var(--line);background:#fff;border-radius:8px;
+    padding:8px 10px;font-size:13.5px;font-weight:500}
+  .blk .lab input:focus{border-color:var(--mustard);box-shadow:0 0 0 3px rgba(205,161,60,.16)}
+  .blk .line2 input[type=text], .blk .line2 select{padding:7px 8px;font-size:12.5px}
+  .blk .sw{width:11px;height:11px;border-radius:4px;flex:none}
+  .x{border:none;background:transparent;color:#BBB9B0;cursor:pointer;font-size:17px;line-height:1;padding:2px;border-radius:6px}
+  .x:hover{color:#B0584B;background:#F6EEEC}
+  .hint{font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+
+  /* category color editor */
+  .cat{display:grid;grid-template-columns:1fr 38px 38px 26px;gap:8px;align-items:center;margin-bottom:7px}
+  .cat input[type=text]{padding:7px 9px}
+  input[type=color]{-webkit-appearance:none;appearance:none;width:38px;height:34px;padding:0;border:1px solid var(--line);
+    border-radius:8px;background:#fff;cursor:pointer}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+  input[type=color]::-webkit-color-swatch{border:none;border-radius:5px}
+
+  /* palette presets */
+  .pal{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;cursor:pointer;margin-bottom:7px;font-size:12.5px;color:var(--ink)}
+  .pal:hover{border-color:var(--slate)}
+  .pal .bar{display:flex;width:64px;height:22px;border-radius:6px;overflow:hidden;flex:none;border:1px solid rgba(0,0,0,.05)}
+  .pal .bar i{display:block;height:100%}
+
+  /* ratio chips */
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:9px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);cursor:pointer}
+  .chip[aria-pressed=true]{background:var(--slate);border-color:var(--slate);color:#fff}
+
+  .filelabel{position:relative;overflow:hidden}
+  .filelabel input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+  @media (max-width:920px){
+    main{flex-direction:column;height:auto}
+    .rail{width:100%;border-right:none;border-bottom:1px solid var(--line);max-height:none;order:2}
+    .stage{order:1;padding:18px}
+    #preview{max-height:60vh}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>시간표 배경화면 메이커 <small>· 블록·색·비율을 직접 편집</small></div>
+    <button class="btn btn-accent" id="exportBtn">PNG 저장</button>
+  </div>
+
+  <main>
+    <aside class="rail">
+      <!-- 기본 -->
+      <div class="card">
+        <p class="eyebrow">기본</p>
+        <label class="field">제목</label>
+        <input type="text" id="title" value="6월 29일~7월 5일">
+        <div style="height:8px"></div>
+        <label class="field">부제목</label>
+        <input type="text" id="subtitle" value="양산">
+        <div class="grid2" style="margin-top:10px">
+          <div><label class="field">시작 시각 (시)</label><input type="number" id="startHour" value="9" min="0" max="23"></div>
+          <div><label class="field">하루 길이 (시간)</label><input type="number" id="spanHours" value="16" min="6" max="20"></div>
+        </div>
+        <label class="field" style="margin-top:10px">요일 이름</label>
+        <div class="grid7" id="dayNames"></div>
+        <div class="btnrow" style="margin-top:11px">
+          <button class="btn btn-sm" data-load="week">이번 주(기본)</button>
+          <button class="btn btn-sm" data-load="day">주간형</button>
+          <button class="btn btn-sm" data-load="night">새벽형</button>
+        </div>
+      </div>
+
+      <!-- 블록 -->
+      <div class="card">
+        <p class="eyebrow">시간 블록</p>
+        <label class="field">편집할 요일</label>
+        <select id="scope"></select>
+        <div id="blockList" style="margin-top:11px"></div>
+        <div class="btnrow" style="margin-top:4px">
+          <button class="btn btn-sm btn-block" id="addBlock">+ 블록 추가</button>
+        </div>
+        <p class="hint">시간은 24시간제(예: 13:30). 자정 이후는 그대로 이어서 적어 (예: 새벽 3시 → 03:00). 블록 높이는 길이에 비례해.</p>
+      </div>
+
+      <!-- 색·테마 -->
+      <div class="card">
+        <p class="eyebrow">색 · 테마</p>
+        <label class="field">팔레트 프리셋 (메인 60 · 서브 30 · 포인트 10)</label>
+        <div id="palettes"></div>
+        <label class="field" style="margin-top:12px">카테고리 색 (칸 · 글자)</label>
+        <div id="catList"></div>
+        <button class="btn btn-sm btn-ghost" id="addCat" style="margin-top:4px">+ 카테고리 추가</button>
+        <div class="grid2" style="margin-top:13px">
+          <div><label class="field">배경</label><input type="color" id="s_bg"></div>
+          <div><label class="field">패널</label><input type="color" id="s_panel"></div>
+          <div><label class="field">격자</label><input type="color" id="s_grid"></div>
+          <div><label class="field">제목 글자</label><input type="color" id="s_header"></div>
+        </div>
+      </div>
+
+      <!-- 내보내기 -->
+      <div class="card">
+        <p class="eyebrow">내보내기</p>
+        <label class="field">비율</label>
+        <div class="chips" id="ratios"></div>
+        <label class="field" style="margin-top:12px">너비 (px)</label>
+        <select id="exportW">
+          <option value="1920">1920</option>
+          <option value="2560">2560</option>
+          <option value="3840" selected>3840 (4K)</option>
+        </select>
+        <label class="field" style="margin-top:12px">맥북 화면 해상도 (선택 시 그 크기로 저장)</label>
+        <select id="macRes">
+          <option value="">— 비율 기준 사용 —</option>
+          <option value="auto">내 화면 (자동 감지)</option>
+          <option value="2560x1664">MacBook Air 13″ · 2560×1664</option>
+          <option value="2880x1864">MacBook Air 15″ · 2880×1864</option>
+          <option value="3024x1964">MacBook Pro 14″ · 3024×1964</option>
+          <option value="3456x2234">MacBook Pro 16″ · 3456×2234</option>
+          <option value="2560x1600">13″ Retina · 2560×1600</option>
+          <option value="2880x1800">15″ · 2880×1800</option>
+        </select>
+        <button class="btn btn-accent btn-block" id="exportBtn2" style="margin-top:12px">PNG 저장</button>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn btn-sm btn-ghost" id="saveJson">설정 저장(JSON)</button>
+          <label class="btn btn-sm btn-ghost filelabel">설정 불러오기<input type="file" id="loadJson" accept="application/json"></label>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="frame"><canvas id="preview"></canvas></div>
+    </section>
+  </main>
+
+<script>
+"use strict";
+/* ---------------- presets & defaults ---------------- */
+const CATS_DEFAULT = [
+  {id:'ipsi',     name:'한예종 입시', fill:'#CDA13C', text:'#3A2B06'},
+  {id:'studia',   name:'스터디아',    fill:'#6E7F94', text:'#F4F5F7'},
+  {id:'mediora',  name:'메디오라',    fill:'#54627A', text:'#F4F5F7'},
+  {id:'exercise', name:'운동',        fill:'#B7B1A4', text:'#38362E'},
+  {id:'reading',  name:'독서',        fill:'#D3CFC5', text:'#44423A'},
+  {id:'free',     name:'자유',        fill:'#E2DFD7', text:'#87857B'},
+  {id:'meal',     name:'식사',        fill:'#CBC7BE', text:'#4A4840'},
+  {id:'shower',   name:'샤워',        fill:'#15677D', text:'#EAF4F6'},
+];
+const SURF_DEFAULT = {bg:'#E5E4E0',panel:'#EEEDEA',grid:'#D2D0C9',header:'#2D3540',
+  sub:'#6E7F94',gutter:'#8A887F',weekend:'#B68E2E',border:'#D4D2CB'};
+
+const TEMPLATE_DAY = {startHour:8, spanHours:16, subtitle:'오전 8시 – 자정 · 매일 동일 배분', blocks:[
+  ['영문 번역','08:00','08:30','ipsi'],['독서 (오전)','08:30','09:00','reading'],
+  ['운동 (헬스+유산소)','09:00','11:00','exercise'],['아침·샤워','11:00','12:00','meal'],
+  ['자유','12:00','12:30','free'],['점심','12:30','13:30','meal'],
+  ['한예종 입시 (논술)','13:30','17:00','ipsi'],['독서 (오후)','17:00','17:30','reading'],
+  ['자유','17:30','18:30','free'],['저녁','18:30','19:30','meal'],
+  ['스터디아','19:30','21:00','studia'],['메디오라','21:00','22:30','mediora'],
+  ['자유','22:30','24:00','free'],
+]};
+const TEMPLATE_NIGHT = {startHour:11, spanHours:16, subtitle:'새벽형 · 식사 고정 · 오전 11시 – 오전 3시', blocks:[
+  ['영문 번역','11:00','11:30','ipsi'],['독서 (오전)','11:30','12:00','reading'],
+  ['자유','12:00','12:30','free'],['점심 (고정)','12:30','13:30','meal'],
+  ['한예종 입시 (논술)','13:30','17:00','ipsi'],['독서 (오후)','17:00','17:30','reading'],
+  ['자유','17:30','18:30','free'],['저녁 (고정)','18:30','19:30','meal'],
+  ['자유','19:30','20:00','free'],['운동 (헬스+유산소)','20:00','22:00','exercise'],
+  ['스터디아','22:00','23:30','studia'],['메디오라','23:30','01:00','mediora'],
+  ['야식','01:00','02:00','meal'],['자유','02:00','03:00','free'],
+]};
+const DEFAULT_WEEK = {startHour:9, spanHours:16, title:'6월 29일~7월 5일', subtitle:'양산', days:[
+  [['영문 번역','09:00','09:30','ipsi'],['독서 (오전)','09:30','10:00','reading'],
+   ['운동 (헬스+유산소)','10:00','11:30','exercise'],['샤워','11:30','12:00','shower'],
+   ['점심','12:00','13:30','meal'],['한예종 입시 (논술)','13:30','17:00','ipsi'],
+   ['독서 (오후)','17:00','17:30','reading'],['저녁','18:30','19:30','meal'],
+   ['메디오라','20:00','23:00','mediora']],
+  [['영문 번역','10:00','10:30','ipsi'],['운동','10:30','11:30','exercise'],
+   ['샤워','11:30','12:00','shower'],['점심','12:00','13:30','meal'],
+   ['스터디아','14:00','15:30','studia'],['독서','16:00','17:30','reading'],
+   ['저녁','18:30','19:30','meal'],['논술 피드백','20:00','22:30','ipsi']],
+  [['영문 번역','09:00','09:30','ipsi'],['독서 (오전)','09:30','10:00','reading'],
+   ['운동 (헬스+유산소)','10:00','11:30','exercise'],['샤워','11:30','12:00','shower'],
+   ['점심','12:00','13:30','meal'],['한예종 입시 (논술)','13:30','17:00','ipsi'],
+   ['독서 (오후)','17:00','17:30','reading'],['저녁','18:30','19:30','meal'],
+   ['메디오라','21:00','22:30','mediora']],
+  [['영문 번역','09:00','09:30','ipsi'],['독서 (오전)','09:30','10:00','reading'],
+   ['운동 (헬스+유산소)','10:00','11:30','exercise'],['샤워','11:30','12:00','shower'],
+   ['점심','12:00','13:30','meal'],['논술 피드백','14:00','15:30','ipsi'],
+   ['독서 (오후)','16:00','17:30','reading'],['저녁','18:30','19:30','meal'],
+   ['스터디아','20:00','21:00','studia'],['메디오라','21:00','22:30','mediora']],
+  [['영문 번역','09:00','09:30','ipsi'],['독서 (오전)','09:30','10:00','reading'],
+   ['운동 (헬스+유산소)','10:00','11:30','exercise'],['샤워','11:30','12:00','shower'],
+   ['점심','12:00','13:30','meal'],['다큐 시청 및 글쓰기','13:30','17:00','ipsi'],
+   ['저녁','18:30','19:30','meal'],['스터디아','19:30','21:00','studia'],
+   ['메디오라','21:00','22:30','mediora']],
+  [['영문 번역','11:00','11:30','ipsi'],['독서 (오전)','11:30','12:00','reading'],
+   ['점심','12:00','13:30','meal'],['운동 (헬스+유산소)','15:00','17:00','exercise'],
+   ['저녁','18:30','19:30','meal'],['메디오라','20:00','21:30','mediora'],
+   ['글쓰기 피드백','22:00','24:00','ipsi']],
+  [['운동 (헬스+유산소)','09:00','11:00','exercise'],['샤워','11:00','12:00','shower'],
+   ['점심','12:00','13:30','meal'],['독서','14:00','16:00','reading'],
+   ['저녁','18:30','19:30','meal'],['스터디아','19:30','21:00','studia'],
+   ['메디오라','21:00','22:30','mediora']],
+]};
+const PALETTES = [
+  ['라이트 그레이·더스티 블루·네이비','#E3E2DE','#8FA3B0','#2C3E50'],
+  ['웜 화이트·미스트 그린·테라코타','#F0EBE0','#A9BBA8','#BB6B4A'],
+  ['페일 그레이·슬레이트 블루·머스타드','#E5E4E0','#6E7F94','#CDA13C'],
+  ['웜 화이트·블루그레이·우드톤','#F0ECE3','#8E9BA0','#A57E54'],
+  ['소프트 화이트·세이지·브라스 골드','#F1EEE7','#9CAA8B','#B08D45'],
+];
+const RATIOS = [['16:9',16,9],['21:9',21,9],['16:10',16,10],['4:3',4,3],['3:2',3,2],['1:1',1,1],['9:16',9,16]];
+
+/* ---------------- state ---------------- */
+function blocksFromTemplate(t){ return t.blocks.map(b=>({label:b[0],start:b[1],end:b[2],cat:b[3]})); }
+const state = {
+  title:DEFAULT_WEEK.title, subtitle:DEFAULT_WEEK.subtitle,
+  startHour:DEFAULT_WEEK.startHour, spanHours:DEFAULT_WEEK.spanHours,
+  dayNames:['월','화','수','목','금','토','일'],
+  dayBlocks: DEFAULT_WEEK.days.map(d=>d.map(b=>({label:b[0],start:b[1],end:b[2],cat:b[3]}))),
+  cats: JSON.parse(JSON.stringify(CATS_DEFAULT)),
+  surf: Object.assign({},SURF_DEFAULT),
+  ratio:[16,9], exportW:3840,
+};
+let scope = 'all';           // 'all' or 0..6
+
+/* ---------------- color helpers ---------------- */
+function hx(c){c=c.replace('#','');if(c.length===3)c=c.split('').map(x=>x+x).join('');
+  return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)];}
+function toHex(r,g,b){const f=v=>('0'+Math.round(Math.max(0,Math.min(255,v))).toString(16)).slice(-2);return '#'+f(r)+f(g)+f(b);}
+function mix(a,b,t){const x=hx(a),y=hx(b);return toHex(x[0]+(y[0]-x[0])*t,x[1]+(y[1]-x[1])*t,x[2]+(y[2]-x[2])*t);}
+function lighten(c,t){return mix(c,'#ffffff',t);}
+function darken(c,f){return mix(c,'#000000',1-f);}
+function lum(c){const v=hx(c).map(x=>{x/=255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);});
+  return .2126*v[0]+.7152*v[1]+.0722*v[2];}
+function autoText(c){return lum(c)>0.5?'#33312B':'#F5F4F1';}
+function catById(id){return state.cats.find(c=>c.id===id);}
+
+/* ---------------- time helpers ---------------- */
+function toOff(t){const m=(''+t).split(':');let v=(parseInt(m[0],10)*60+(parseInt(m[1],10)||0))-state.startHour*60;
+  if(isNaN(v))return 0; if(v<0)v+=1440; return v;}
+function pad(n){return ('0'+n).slice(-2);}
+function addMin(t,m){const p=(''+t).split(':');let v=(parseInt(p[0],10)*60+(parseInt(p[1],10)||0))+m;
+  if(isNaN(v))v=m; return pad(Math.floor(v/60))+':'+pad(((v%60)+60)%60);}
+function clockLabel(off){let raw=state.startHour*60+off;let hh=Math.floor(raw/60),mm=raw%60;
+  if(hh===24)return '24:00'; if(hh>24)hh-=24; return pad(hh)+':'+pad(mm);}
+
+/* ---------------- canvas drawing ---------------- */
+function fontStr(w,px){return w+' '+px+"px 'Pretendard','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif";}
+function fitFont(ctx,text,maxW,start,w){let px=start;while(px>11){ctx.font=fontStr(w,px);
+  if(ctx.measureText(text).width<=maxW)break;px--;}return px;}
+function rr(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);if(r<0)r=0;ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function drawFor(ctx,W,H){
+  const s=H/2160, su=state.surf, win=state.spanHours*60;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=su.bg; ctx.fillRect(0,0,W,H);
+
+  const headerH=150*s, colhdrH=78*s, legendH=92*s;
+  const gridTop=headerH+colhdrH, gridBot=H-legendH, gridH=gridBot-gridTop;
+  const gutterX=158*s, gridL=178*s, gridR=W-54*s, colGap=14*s;
+  const colW=(gridR-gridL-6*colGap)/7, ppm=gridH/win;
+
+  // title
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillStyle=su.header; ctx.font=fontStr(800,66*s);
+  ctx.fillText(state.title||'', gridL, 90*s);
+  ctx.fillStyle=su.sub; ctx.font=fontStr(300,32*s);
+  ctx.fillText(state.subtitle||'', gridL+4, 132*s);
+
+  // panel
+  ctx.fillStyle=su.panel; ctx.strokeStyle=su.border; ctx.lineWidth=2*s;
+  rr(ctx,gridL-8*s,gridTop-6*s,(gridR+8*s)-(gridL-8*s),(gridBot+6*s)-(gridTop-6*s),18*s);
+  ctx.fill(); ctx.stroke();
+
+  // gridlines + gutter labels
+  ctx.strokeStyle=su.grid; ctx.lineWidth=2*s;
+  ctx.fillStyle=su.gutter; ctx.font=fontStr(400,26*s);
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let off=0; off<=win; off+=120){
+    const y=gridTop+off*ppm;
+    ctx.beginPath();ctx.moveTo(gridL-4*s,y);ctx.lineTo(gridR+4*s,y);ctx.stroke();
+    ctx.fillText(clockLabel(off), gutterX, y);
+  }
+
+  // columns
+  for(let i=0;i<7;i++){
+    const x0=gridL+i*(colW+colGap), cx=x0+colW/2;
+    const blocks=state.dayBlocks[i]||[];
+    const weekend=(i>=5);
+    // day header
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillStyle=weekend?su.weekend:su.header;
+    let dn=state.dayNames[i]||'';
+    let dpx=fitFont(ctx,dn,colW-10*s,38*s,500); ctx.font=fontStr(500,dpx);
+    ctx.fillText(dn, cx, headerH+2*s);
+
+    for(const b of blocks){
+      const so=toOff(b.start), eo=toOff(b.end);
+      const y0=gridTop+so*ppm, y1=gridTop+Math.max(eo,so)*ppm, bh=y1-y0;
+      if(bh<=0) continue;
+      const cat=catById(b.cat)||{fill:'#cccccc',text:'#333'};
+      const bx=x0+2*s, by=y0+2.5*s, bw=colW-4*s, bhh=bh-5*s;
+      ctx.fillStyle=cat.fill; rr(ctx,bx,by,bw,bhh,11*s); ctx.fill();
+      // label
+      const cy=(by+by+bhh)/2;
+      const base = bh>=104*s?31*s : bh>=56*s?28*s : bh>=34*s?23*s : 19*s;
+      const lpx=fitFont(ctx,b.label,colW-28*s,base,500); ctx.font=fontStr(500,lpx);
+      ctx.fillStyle=cat.text; ctx.textAlign='center';
+      if(bh>=104*s){
+        ctx.textBaseline='alphabetic';
+        ctx.fillText(b.label, cx, cy-2*s);
+        ctx.font=fontStr(400,21*s);
+        ctx.fillStyle=mix(cat.text,cat.fill,0.42);
+        ctx.fillText(clockLabel(so)+'–'+clockLabel(eo), cx, cy+26*s);
+      } else {
+        ctx.textBaseline='middle';
+        ctx.fillText(b.label, cx, cy);
+      }
+    }
+  }
+
+  // legend
+  ctx.textBaseline='middle'; ctx.textAlign='left';
+  ctx.font=fontStr(400,26*s);
+  const sw=34*s, gsw=12*s, ig=46*s;
+  let total=0; const items=state.cats.map(c=>{const w=ctx.measureText(c.name).width;total+=sw+gsw+w;return {c,w};});
+  total+=ig*(state.cats.length-1);
+  let lx=(W-total)/2, ly=H-legendH+46*s;
+  for(const {c,w} of items){
+    ctx.fillStyle=c.fill; rr(ctx,lx,ly-sw/2,sw,sw,7*s); ctx.fill();
+    ctx.fillStyle='#5A5850'; ctx.fillText(c.name, lx+sw+gsw, ly+1*s);
+    lx+=sw+gsw+w+ig;
+  }
+}
+
+/* ---------------- preview & export ---------------- */
+const preview=document.getElementById('preview');
+let drawQueued=false;
+function draw(){
+  drawQueued=false;
+  const [rw,rh]=state.ratio, PW=1600, PH=Math.round(PW*rh/rw);
+  preview.width=PW; preview.height=PH;
+  drawFor(preview.getContext('2d'),PW,PH);
+}
+function scheduleDraw(){ if(!drawQueued){drawQueued=true;requestAnimationFrame(draw);} }
+function exportPNG(){
+  const [rw,rh]=state.ratio, W=state.exportW, H=Math.round(W*rh/rw);
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  drawFor(c.getContext('2d'),W,H);
+  const a=document.createElement('a');
+  a.download=((state.title||'시간표').replace(/\s+/g,'_'))+'_'+rw+'x'+rh+'.png';
+  a.href=c.toDataURL('image/png'); a.click();
+}
+
+/* ---------------- UI builders ---------------- */
+const $=id=>document.getElementById(id);
+
+function buildDayNames(){
+  const wrap=$('dayNames'); wrap.innerHTML='';
+  state.dayNames.forEach((n,i)=>{
+    const inp=document.createElement('input'); inp.type='text'; inp.value=n;
+    inp.oninput=()=>{state.dayNames[i]=inp.value; rebuildScope(); scheduleDraw();};
+    wrap.appendChild(inp);
+  });
+}
+function rebuildScope(){
+  const sel=$('scope'); const cur=scope; sel.innerHTML='';
+  const all=document.createElement('option'); all.value='all'; all.textContent='모든 요일 (동일하게)'; sel.appendChild(all);
+  state.dayNames.forEach((n,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=n+'요일';sel.appendChild(o);});
+  sel.value = (cur==='all')?'all':String(cur);
+}
+function activeIdx(){ return scope==='all'?0:scope; }
+function commitMirror(){ // if editing all, copy day 0 to every day
+  if(scope==='all'){ const t=state.dayBlocks[0];
+    for(let i=1;i<7;i++) state.dayBlocks[i]=JSON.parse(JSON.stringify(t)); }
+}
+function buildBlockList(focusIdx){
+  const wrap=$('blockList'); wrap.innerHTML='';
+  const blocks=state.dayBlocks[activeIdx()];
+  blocks.forEach((b,idx)=>{
+    const row=document.createElement('div'); row.className='blk';
+    const cat=catById(b.cat)||{fill:'#ccc'};
+    // label
+    const lab=document.createElement('div'); lab.className='lab';
+    const dot=document.createElement('span'); dot.className='sw'; dot.style.background=cat.fill;
+    const li=document.createElement('input'); li.type='text'; li.value=b.label; li.placeholder='이름 입력';
+    li.oninput=()=>{b.label=li.value; commitMirror(); scheduleDraw();};
+    lab.appendChild(dot); lab.appendChild(li);
+    // cat select
+    const cs=document.createElement('select');
+    state.cats.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;if(c.id===b.cat)o.selected=true;cs.appendChild(o);});
+    cs.onchange=()=>{b.cat=cs.value; dot.style.background=(catById(b.cat)||{}).fill; commitMirror(); scheduleDraw();};
+    // start / end
+    const si=document.createElement('input'); si.type='text'; si.value=b.start;
+    si.oninput=()=>{b.start=si.value; commitMirror(); scheduleDraw();};
+    const ei=document.createElement('input'); ei.type='text'; ei.value=b.end;
+    ei.oninput=()=>{b.end=ei.value; commitMirror(); scheduleDraw();};
+    // delete
+    const del=document.createElement('button'); del.className='x'; del.innerHTML='&times;'; del.title='삭제';
+    del.onclick=()=>{blocks.splice(idx,1); commitMirror(); buildBlockList(); scheduleDraw();};
+    const line1=document.createElement('div'); line1.className='line1';
+    const line2=document.createElement('div'); line2.className='line2';
+    line1.append(lab, del);
+    line2.append(cs, si, ei);
+    row.append(line1, line2);
+    wrap.appendChild(row);
+  });
+  if(focusIdx!=null){
+    const ins=wrap.querySelectorAll('.lab input');
+    if(ins[focusIdx]){ ins[focusIdx].focus(); ins[focusIdx].select();
+      ins[focusIdx].scrollIntoView({block:'nearest'}); }
+  }
+}
+function buildCatList(){
+  const wrap=$('catList'); wrap.innerHTML='';
+  state.cats.forEach((c,idx)=>{
+    const row=document.createElement('div'); row.className='cat';
+    const nm=document.createElement('input'); nm.type='text'; nm.value=c.name;
+    nm.oninput=()=>{c.name=nm.value; buildBlockList(); scheduleDraw();};
+    const fill=document.createElement('input'); fill.type='color'; fill.value=c.fill;
+    fill.oninput=()=>{c.fill=fill.value; c.text=autoText(c.fill); txt.value=c.text; buildBlockList(); scheduleDraw();};
+    const txt=document.createElement('input'); txt.type='color'; txt.value=c.text;
+    txt.oninput=()=>{c.text=txt.value; scheduleDraw();};
+    const del=document.createElement('button'); del.className='x'; del.innerHTML='&times;'; del.title='삭제';
+    del.onclick=()=>{
+      const used=state.dayBlocks.some(d=>d.some(b=>b.cat===c.id));
+      if(used){ alert('이 카테고리를 쓰는 블록이 있어 삭제할 수 없어. 먼저 블록의 카테고리를 바꿔줘.'); return; }
+      state.cats.splice(idx,1); buildCatList(); buildBlockList(); scheduleDraw();
+    };
+    row.append(nm,fill,txt,del);
+    wrap.appendChild(row);
+  });
+}
+function buildPalettes(){
+  const wrap=$('palettes'); wrap.innerHTML='';
+  PALETTES.forEach(p=>{
+    const [name,main,sub,point]=p;
+    const b=document.createElement('button'); b.className='pal';
+    const bar=document.createElement('span'); bar.className='bar';
+    [[main,'60%'],[sub,'30%'],[point,'10%']].forEach(([col,w])=>{const i=document.createElement('i');i.style.background=col;i.style.width=w;bar.appendChild(i);});
+    const t=document.createElement('span'); t.textContent=name;
+    b.append(bar,t);
+    b.onclick=()=>applyPalette(main,sub,point);
+    wrap.appendChild(b);
+  });
+}
+function applyPalette(main,sub,point){
+  const su=state.surf;
+  su.bg=main; su.panel=lighten(main,0.40); su.grid=darken(main,0.88);
+  su.border=darken(main,0.93); su.sub=sub; su.weekend=darken(point,0.90); su.header='#2D3540';
+  const set=(id,fill)=>{const c=catById(id); if(c){c.fill=fill; c.text=autoText(fill);}};
+  set('ipsi',point); set('studia',sub); set('mediora',darken(sub,0.78));
+  set('exercise',darken(main,0.80)); set('meal',darken(main,0.87));
+  set('reading',darken(main,0.92)); set('free',lighten(main,0.30));
+  syncSurfInputs(); buildCatList(); buildBlockList(); scheduleDraw();
+}
+function buildRatios(){
+  const wrap=$('ratios'); wrap.innerHTML='';
+  RATIOS.forEach(([lab,w,h])=>{
+    const b=document.createElement('button'); b.className='chip'; b.textContent=lab;
+    b.setAttribute('aria-pressed', (w===state.ratio[0]&&h===state.ratio[1])?'true':'false');
+    b.onclick=()=>{state.ratio=[w,h]; var mr=$('macRes'); if(mr)mr.value=''; buildRatios(); scheduleDraw();};
+    wrap.appendChild(b);
+  });
+}
+function syncSurfInputs(){
+  $('s_bg').value=state.surf.bg; $('s_panel').value=state.surf.panel;
+  $('s_grid').value=state.surf.grid; $('s_header').value=state.surf.header;
+}
+
+/* ---------------- events ---------------- */
+$('title').oninput=e=>{state.title=e.target.value; scheduleDraw();};
+$('subtitle').oninput=e=>{state.subtitle=e.target.value; scheduleDraw();};
+$('startHour').oninput=e=>{state.startHour=parseInt(e.target.value,10)||0; scheduleDraw();};
+$('spanHours').oninput=e=>{state.spanHours=Math.max(1,parseInt(e.target.value,10)||16); scheduleDraw();};
+$('scope').onchange=e=>{scope=(e.target.value==='all')?'all':parseInt(e.target.value,10); buildBlockList();};
+$('addBlock').onclick=()=>{
+  const blocks=state.dayBlocks[activeIdx()];
+  const last=blocks[blocks.length-1];
+  const start=last?last.end:('0'+state.startHour).slice(-2)+':00';
+  const defCat=state.cats.some(c=>c.id==='free')?'free':state.cats[0].id;
+  blocks.push({label:'',start:start,end:addMin(start,30),cat:defCat});
+  commitMirror(); buildBlockList(blocks.length-1); scheduleDraw();
+};
+$('addCat').onclick=()=>{
+  const id='cat'+Date.now().toString(36);
+  state.cats.push({id,name:'새 카테고리',fill:'#B7B1A4',text:'#38362E'});
+  buildCatList(); buildBlockList();
+};
+$('s_bg').oninput=e=>{state.surf.bg=e.target.value; scheduleDraw();};
+$('s_panel').oninput=e=>{state.surf.panel=e.target.value; scheduleDraw();};
+$('s_grid').oninput=e=>{state.surf.grid=e.target.value; scheduleDraw();};
+$('s_header').oninput=e=>{state.surf.header=e.target.value; scheduleDraw();};
+$('exportW').onchange=e=>{state.exportW=parseInt(e.target.value,10);};
+$('macRes').onchange=e=>{
+  const v=e.target.value; if(!v)return;
+  let W,H;
+  if(v==='auto'){const dpr=window.devicePixelRatio||1;W=Math.round(screen.width*dpr);H=Math.round(screen.height*dpr);}
+  else{const p=v.split('x');W=parseInt(p[0],10);H=parseInt(p[1],10);}
+  state.ratio=[W,H]; state.exportW=W; buildRatios(); scheduleDraw();
+};
+$('exportBtn').onclick=exportPNG;
+$('exportBtn2').onclick=exportPNG;
+document.querySelectorAll('[data-load]').forEach(btn=>{
+  btn.onclick=()=>{
+    if(btn.dataset.load==='week'){
+      state.startHour=DEFAULT_WEEK.startHour; state.spanHours=DEFAULT_WEEK.spanHours;
+      state.title=DEFAULT_WEEK.title; state.subtitle=DEFAULT_WEEK.subtitle;
+      state.dayBlocks=DEFAULT_WEEK.days.map(d=>d.map(b=>({label:b[0],start:b[1],end:b[2],cat:b[3]})));
+      $('title').value=state.title;
+    } else {
+      const t = btn.dataset.load==='night'?TEMPLATE_NIGHT:TEMPLATE_DAY;
+      state.startHour=t.startHour; state.spanHours=t.spanHours; state.subtitle=t.subtitle;
+      state.dayBlocks=Array.from({length:7},()=>blocksFromTemplate(t));
+    }
+    $('startHour').value=state.startHour; $('spanHours').value=state.spanHours; $('subtitle').value=state.subtitle;
+    buildBlockList(); scheduleDraw();
+  };
+});
+$('saveJson').onclick=()=>{
+  const data=JSON.stringify({title:state.title,subtitle:state.subtitle,startHour:state.startHour,
+    spanHours:state.spanHours,dayNames:state.dayNames,dayBlocks:state.dayBlocks,cats:state.cats,surf:state.surf},null,1);
+  const a=document.createElement('a'); a.download=(state.title||'시간표')+'.json';
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'})); a.click();
+};
+$('loadJson').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return; const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result);
+    Object.assign(state,{title:d.title??state.title,subtitle:d.subtitle??state.subtitle,
+      startHour:d.startHour??state.startHour,spanHours:d.spanHours??state.spanHours,
+      dayNames:d.dayNames??state.dayNames,dayBlocks:d.dayBlocks??state.dayBlocks,
+      cats:d.cats??state.cats,surf:Object.assign({},SURF_DEFAULT,d.surf||{})});
+    $('title').value=state.title; $('subtitle').value=state.subtitle;
+    $('startHour').value=state.startHour; $('spanHours').value=state.spanHours;
+    buildDayNames(); rebuildScope(); buildBlockList(); buildCatList(); syncSurfInputs(); scheduleDraw();
+  }catch(err){ alert('불러오기 실패: '+err.message); } };
+  r.readAsText(f); e.target.value='';
+};
+
+/* ---------------- init ---------------- */
+buildDayNames(); rebuildScope(); buildBlockList(); buildCatList(); buildPalettes();
+buildRatios(); syncSurfInputs(); draw();
+(function(){const dpr=window.devicePixelRatio||1;const W=Math.round(screen.width*dpr),H=Math.round(screen.height*dpr);
+  const o=document.querySelector('#macRes option[value="auto"]'); if(o)o.textContent='내 화면 ('+W+'×'+H+')';})();
+if(document.fonts&&document.fonts.ready){ document.fonts.ready.then(scheduleDraw); }
+</script>
+</body>
+</html>
